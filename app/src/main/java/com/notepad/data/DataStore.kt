@@ -1,27 +1,30 @@
-package com.notepad.data;
+package com.notepad.data
 
-import android.content.Context;
+import android.content.Context
+import org.jetbrains.anko.doAsync
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+object DataStore {
 
-public final class DataStore {
+    @JvmStatic
+    lateinit var notes: NoteDatabase
+        private set
 
-    private DataStore() {}
-
-    public static final Executor EXEC = Executors.newSingleThreadExecutor();
-
-    private static NoteDatabase notes;
-
-    public static void init(Context context) {
-        notes = new NoteDatabase(context);
+    @JvmStatic
+    fun init(context: Context?) {
+        notes = NoteDatabase(context)
     }
 
-    public static NoteDatabase getNotes() {
-        return notes;
+    @JvmStatic
+    fun execute(runnable: Runnable?) {
+        doAsync {
+            runnable!!.run()
+        }
     }
 
-    public static void execute(Runnable runnable) {
-        EXEC.execute(runnable);
+    @JvmStatic
+    fun execute(fn:()->Unit) {
+        doAsync {
+            fn()
+        }
     }
 }

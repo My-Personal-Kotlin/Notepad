@@ -1,33 +1,31 @@
-package com.notepad.data;
+package com.notepad.data
 
-import android.provider.BaseColumns;
+import com.notepad.data.NotesContract.NoteTable.CREATED_AT
+import com.notepad.data.NotesContract.NoteTable.IS_PINNED
+import com.notepad.data.NotesContract.NoteTable.TEXT
+import com.notepad.data.NotesContract.NoteTable.UPDATED_AT
+import com.notepad.data.NotesContract.NoteTable._ID
+import com.notepad.data.NotesContract.NoteTable._TABLE_NAME
 
-import static com.notepad.data.NotesContract.NoteTable.CREATED_AT;
-import static com.notepad.data.NotesContract.NoteTable._TABLE_NAME;
+object NotesContract {
 
-public final class NotesContract {
-    private NotesContract() {}
+    val SQL_CREATE_ENTRIES =
+        """CREATE TABLE $_TABLE_NAME (
+            $_ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+            $TEXT TEXT, 
+            $IS_PINNED INTEGER, 
+            $CREATED_AT INTEGER, 
+            $UPDATED_AT INTEGER)""".trimMargin()
 
-    public static final String SQL_CREATE_ENTRIES =
-            "CREATE TABLE " + _TABLE_NAME + " (" +
-            NoteTable._ID + " INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-            NoteTable.TEXT + " TEXT, " +
-            NoteTable.IS_PINNED + " INTEGER, " +
-            CREATED_AT + " INTEGER, " +
-            NoteTable.UPDATED_AT + " INTEGER" +
-            ")";
+    val SQL_DELETE_ENTRIES = """DROP TABLE IF EXISTS $_TABLE_NAME"""
+    val SQL_QUERY_ALL = """SELECT * FROM $_TABLE_NAME ORDER BY $CREATED_AT DESC"""
 
-    public static final String SQL_DELETE_ENTRIES =
-            "DROP TABLE IF EXISTS " + _TABLE_NAME;
-
-    public static final String SQL_QUERY_ALL =
-            "SELECT * FROM NOTE ORDER BY " + CREATED_AT + " DESC";
-
-    public interface NoteTable extends BaseColumns {
-        String _TABLE_NAME = "notes";
-        String TEXT = "text";
-        String IS_PINNED = "is_pinned";
-        String CREATED_AT = "created_at";
-        String UPDATED_AT = "updated_at";
+    object NoteTable {
+         val _ID = "_id"
+         val _TABLE_NAME = "notes"
+         val TEXT = "text"
+         val IS_PINNED = "is_pinned"
+         val CREATED_AT = "created_at"
+         val UPDATED_AT = "updated_at"
     }
 }

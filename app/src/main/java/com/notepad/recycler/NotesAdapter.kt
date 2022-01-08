@@ -1,86 +1,66 @@
-package com.notepad.recycler;
+package com.notepad.recycler
 
-import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
+import android.content.Context
+import android.os.Handler
+import androidx.recyclerview.widget.RecyclerView
+import com.notepad.recycler.NotesAdapter.NotesViewHolder
+import android.view.ViewGroup
+import android.view.LayoutInflater
+import com.notepad.R
+import com.notepad.data.DataStore
+import android.os.Looper
+import android.view.View
+import com.notepad.data.Note
+import com.notepad.util.layoutInflator
+import kotlinx.android.synthetic.main.item_note.view.*
+import java.util.ArrayList
 
-import androidx.recyclerview.widget.RecyclerView;
+class NotesAdapter(private val context: Context) : RecyclerView.Adapter<NotesViewHolder>() {
 
-import com.notepad.R;
-import com.notepad.data.DataStore;
-import com.notepad.data.Note;
+    private var notes: List<Note> = ArrayList()
+    private var isRefreshing = false
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NotesViewHolder> {
-
-    private final Context context;
-    private List<Note> notes = new ArrayList<>();
-    private boolean isRefreshing = false;
-
-    public NotesAdapter(Context context) {
-        this.context = context;
-        setHasStableIds(true);
+    init {
+        setHasStableIds(true)
     }
 
-    @Override
-    public void onAttachedToRecyclerView(RecyclerView recyclerView) {
-        refresh();
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        refresh()
     }
 
-    @Override
-    public long getItemId(int position) {
-        return notes.get(position).getId();
+    override fun getItemId(position: Int): Long {
+        return notes[position].id.toLong()
     }
 
-    @Override
-    public int getItemCount() {
-        return notes.size();
+    override fun getItemCount(): Int {
+        return notes.size
     }
 
-    @Override
-    public NotesViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_note, parent, false);
-        return new NotesViewHolder(view);
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NotesViewHolder {
+        val view = context.layoutInflator.inflate(R.layout.item_note, parent, false)
+        return NotesViewHolder(view)
     }
 
-    @Override
-    public void onBindViewHolder(NotesViewHolder holder, int position) {
-        final Note note = notes.get(position);
-        holder.text.setText(note.getText());
+    override fun onBindViewHolder(holder: NotesViewHolder, position: Int) {
+        val note = notes[position]
+        holder.text.text = note.text
     }
 
-    public void refresh() {
-        if (isRefreshing) return;
-        isRefreshing = true;
-        DataStore.execute(new Runnable() {
-            @Override
-            public void run() {
-                final List<Note> notes = DataStore.getNotes().getAll();
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        NotesAdapter.this.notes = notes;
-                        notifyDataSetChanged();
-                        isRefreshing = false;
-                    }
-                });
+    fun refresh() {
+        if (isRefreshing) return
+        isRefreshing = true
+        DataStore.execute {
+            val notes = DataStore.notes.getAll()
+            Handler(Looper.getMainLooper()).post {
+                this@NotesAdapter.notes = notes
+                notifyDataSetChanged()
+                isRefreshing = false
             }
-        });
-    }
-
-    public static class NotesViewHolder extends RecyclerView.ViewHolder {
-
-        TextView text;
-
-        NotesViewHolder(View itemView) {
-            super(itemView);
-            text = itemView.findViewById(R.id.text);
         }
     }
+
+    class NotesViewHolder internal constructor(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        var text= itemView.text
+    }
+
 }

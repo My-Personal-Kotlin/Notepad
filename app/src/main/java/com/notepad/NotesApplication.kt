@@ -1,14 +1,11 @@
-package com.notepad;
+package com.notepad
 
-import android.app.Application;
+import android.app.Application
+import com.notepad.data.DataStore.init
 
-import com.notepad.data.DataStore;
-
-public class NotesApplication extends Application {
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        DataStore.init(this);
+class NotesApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        init(this)
     }
 }

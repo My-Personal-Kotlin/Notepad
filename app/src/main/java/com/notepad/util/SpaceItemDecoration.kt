@@ -1,46 +1,35 @@
-package com.notepad.util;
+package com.notepad.util
 
-import android.content.Context;
-import android.graphics.Rect;
-import android.view.View;
+import android.content.Context
+import android.graphics.Rect
+import android.view.View
+import androidx.recyclerview.widget.RecyclerView.ItemDecoration
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
+import java.lang.RuntimeException
 
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
-public class SpaceItemDecoration extends RecyclerView.ItemDecoration {
+class SpaceItemDecoration(context: Context, dimenRes: Int) : RecyclerView.ItemDecoration() {
 
-    private final Context context;
-    private final int dimenRes;
-    private final int space;
+    private val space: Int = context.resources.getDimensionPixelOffset(dimenRes)
 
-    public SpaceItemDecoration(Context context, int dimenRes) {
-        this.context = context;
-        this.dimenRes = dimenRes;
-        this.space = context.getResources().getDimensionPixelOffset(dimenRes);
-    }
-
-    private SpaceItemDecoration() {
-        throw new RuntimeException();
-    }
-
-    @Override
-    public void getItemOffsets(Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
-        super.getItemOffsets(outRect, view, parent, state);
-        int position = parent.getChildAdapterPosition(view);
-        switch (getOrientation(parent)) {
-            case LinearLayoutManager.VERTICAL:
-                if (position != 0) outRect.top = space;
-                break;
-            case LinearLayoutManager.HORIZONTAL:
-                if (position != 0) outRect.left = space;
+    override fun getItemOffsets(
+        outRect: Rect,
+        view: View,
+        parent: RecyclerView,
+        state: RecyclerView.State
+    ) {
+        super.getItemOffsets(outRect, view, parent, state)
+        val position = parent.getChildAdapterPosition(view)
+        when (getOrientation(parent)) {
+            LinearLayoutManager.VERTICAL -> if (position != 0) outRect.top = space
+            LinearLayoutManager.HORIZONTAL -> if (position != 0) outRect.left = space
         }
     }
 
-    private int getOrientation(RecyclerView parent) {
-        RecyclerView.LayoutManager lm = parent.getLayoutManager();
-        if (lm instanceof LinearLayoutManager) {
-            return ((LinearLayoutManager) lm).getOrientation();
-        }
-        return -1;
+    private fun getOrientation(parent: RecyclerView): Int {
+        val lm = parent.layoutManager
+        return (lm as? LinearLayoutManager)?.orientation ?: -1
     }
+
 }

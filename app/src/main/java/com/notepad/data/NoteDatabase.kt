@@ -1,133 +1,101 @@
-package com.notepad.data;
+package com.notepad.data
 
-import android.content.ContentValues;
-import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import android.content.ContentValues
+import android.content.Context
+import android.database.Cursor
+import android.provider.BaseColumns
+import androidx.core.database.sqlite.transaction
+import com.notepad.data.NotesContract.NoteTable.CREATED_AT
+import com.notepad.data.NotesContract.NoteTable.IS_PINNED
+import com.notepad.data.NotesContract.NoteTable.TEXT
+import com.notepad.data.NotesContract.NoteTable.UPDATED_AT
+import com.notepad.data.NotesContract.NoteTable._ID
+import com.notepad.data.NotesContract.NoteTable._TABLE_NAME
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+class NoteDatabase(context: Context?) {
+    private val helper = NotesOpenHelper(context)
 
-import static android.provider.BaseColumns._ID;
-import static com.notepad.data.NotesContract.NoteTable.CREATED_AT;
-import static com.notepad.data.NotesContract.NoteTable.IS_PINNED;
-import static com.notepad.data.NotesContract.NoteTable.TEXT;
-import static com.notepad.data.NotesContract.NoteTable.UPDATED_AT;
-import static com.notepad.data.NotesContract.NoteTable._TABLE_NAME;
-
-public class NoteDatabase {
-
-    private final NotesOpenHelper helper;
-
-    public NoteDatabase(Context context) {
-        helper = new NotesOpenHelper(context);
+    fun getAll(): List<Note> {
+        return helper.readableDatabase.query(
+            _TABLE_NAME,
+            null,
+            null,
+            null,
+            null,
+            null,
+            CREATED_AT
+        ).use(this::allFromCursor)
     }
 
-    public List<Note> getAll() {
-        Cursor cursor = helper.getReadableDatabase().query(_TABLE_NAME,
-                null,
-                null,
-                null,
-                null,
-                null,
-                CREATED_AT);
-        List<Note> retval = allFromCursor(cursor);
-        cursor.close();
-        return retval;
+    fun loadAllByIds(vararg ids: Int): List<Note> {
+        val questionMarks = ids.map { "?" }.joinToString { ", " }
+        val args = ids.map { "$it" }.toTypedArray()
+        val selection = "$_ID IN ($questionMarks)"
+        return helper.readableDatabase.query(_TABLE_NAME,
+            null,
+            selection,
+            args,
+            null,
+            null,
+            CREATED_AT).use(this::allFromCursor)
     }
 
-    public List<Note> loadAllByIds(int... ids) {
-        StringBuilder questionMarks = new StringBuilder();
-        int i = 0;
-        while (i++ < ids.length) {
-            questionMarks.append("?");
-            if (i <= ids.length - 1) {
-                questionMarks.append(", ");
+    fun insert(vararg notes: Note) {
+        helper.writableDatabase.transaction {
+            fromNotes(notes).forEach {
+                insert(_TABLE_NAME, null, it)
             }
         }
-        String[] args = new String[ids.length];
-        for (i = 0; i < ids.length; ++i) {
-            args[i] = Integer.toString(ids[i]);
-        }
-        String selection = _ID + " IN (" + questionMarks.toString() + ")";
-        Cursor cursor = helper.getReadableDatabase().query(_TABLE_NAME,
-                null,
-                selection,
-                args,
-                null,
-                null,
-                CREATED_AT);
-        List<Note> retval = allFromCursor(cursor);
-        cursor.close();
-        return retval;
     }
 
-    public void insert(Note... notes) {
-        List<ContentValues> values = fromNotes(notes);
-        SQLiteDatabase db = helper.getWritableDatabase();
-        db.beginTransaction();
-        try {
-            for (ContentValues value : values) {
-                db.insert(_TABLE_NAME, null, value);
-            }
-            db.setTransactionSuccessful();
-        } finally {
-            db.endTransaction();
+    fun update(note: Note) {
+        val values = fromNote(note)
+        helper.writableDatabase.update(_TABLE_NAME,
+            values,
+            _ID + " = ?",
+            arrayOf("${note.id}"))
+    }
+
+    fun delete(note: Note) {
+        helper.writableDatabase.delete(_TABLE_NAME,
+            _ID + " = ?",
+            arrayOf("${note.id}"))
+    }
+
+    private fun fromCursor(cursor: Cursor): Note {
+        var col = 0
+        return Note().apply {
+            id = cursor.getInt(col++)
+            text = cursor.getString(col++)
+            isPinned = cursor.getInt(col++) != 0
+            createdAt = Date(cursor.getLong(col++))
+            updatedAt = Date(cursor.getLong(col))
         }
     }
 
-    public void update(Note note) {
-        ContentValues values = fromNote(note);
-        helper.getWritableDatabase().update(_TABLE_NAME,
-                values,
-                _ID + " = ?",
-                new String[]{ Integer.toString(note.getId()) });
-    }
-
-    public void delete(Note note) {
-        helper.getWritableDatabase().delete(_TABLE_NAME,
-                _ID + " = ?",
-                new String[]{ Integer.toString(note.getId()) });
-    }
-
-    private static Note fromCursor(Cursor cursor) {
-        int col = 0;
-        Note note = new Note();
-        note.setId(cursor.getInt(col++));
-        note.setText(cursor.getString(col++));
-        note.setPinned(cursor.getInt(col++) != 0);
-        note.setCreatedAt(new Date(cursor.getLong(col++)));
-        note.setUpdatedAt(new Date(cursor.getLong(col)));
-        return note;
-    }
-
-    private static List<Note> allFromCursor(Cursor cursor) {
-        List<Note> retval = new ArrayList<>();
+    private fun allFromCursor(cursor: Cursor): List<Note> {
+        val retval = mutableListOf<Note>()
         while (cursor.moveToNext()) {
-            retval.add(fromCursor(cursor));
+            retval.add(fromCursor(cursor))
         }
-        return retval;
+        return retval
     }
 
-    private static ContentValues fromNote(Note note) {
-        ContentValues values = new ContentValues();
-        int id = note.getId();
-        if (id != -1) {
-            values.put(_ID, id);
+    private fun fromNote(note: Note): ContentValues {
+        return ContentValues().apply {
+            val id = note.id
+            if (id != -1) {
+                put(_ID, id)
+            }
+            put(TEXT, note.text)
+            put(IS_PINNED, note.isPinned)
+            put(CREATED_AT, note.createdAt.time)
+            put(UPDATED_AT, note.updatedAt!!.time)
         }
-        values.put(TEXT, note.getText());
-        values.put(IS_PINNED, note.isPinned());
-        values.put(CREATED_AT, note.getCreatedAt().getTime());
-        values.put(UPDATED_AT, note.getUpdatedAt().getTime());
-        return values;
     }
 
-    private static List<ContentValues> fromNotes(Note[] notes) {
-        List<ContentValues> values = new ArrayList<>();
-        for (Note note : notes) {
-            values.add(fromNote(note));
-        }
-        return values;
+    private fun fromNotes(notes: Array<out Note>): List<ContentValues> {
+        return notes.map(this::fromNote)
     }
 }
